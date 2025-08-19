@@ -7,25 +7,21 @@ using BlobTriggerAttribute = Microsoft.Azure.Functions.Worker.BlobTriggerAttribu
 
 namespace FileMetadataExtractor.Features.AzureFunctions;
 
-/// <summary>
-/// Processes a blob triggered by an Azure Blob Storage event and writes the output to a specified blob.
-/// </summary>
-/// <remarks>This function is triggered by a blob upload or modification event in the "test-samples-trigger"
-/// container. It logs the blob's name, content type, and metadata, and writes a formatted string containing the blob's
-/// name and content type to the "test-samples-output" container.</remarks>
+
 [StorageAccount("metadataacccount")]
-public static class BlobFunction
+public static class BlobFunction 
 {
-    [Function(nameof(BlobFunction))]
+    [Function("ExtractMetaData")]
     [BlobOutput("test-samples-output/{name}-output.txt")]
-    public static async Task<string> RunAsync(
+    public static async Task<string> RunMetadataAsync(
         [BlobTrigger("test-samples-trigger/{name}")] BlobClient myBlob,
         string name,
-        FunctionContext context)
+        FunctionContext context,
+        CancellationToken ct)
     {
-        var logger = context.GetLogger("BlobFunction");
+        ILogger logger = context.GetLogger("BlobFunction");
 
-        Response<BlobProperties> properties = await myBlob.GetPropertiesAsync();
+        Response<BlobProperties> properties = await myBlob.GetPropertiesAsync(cancellationToken: ct);
 
         logger.LogInformation($"Name: {name}");
         logger.LogInformation($"ContentType: {properties.Value.ContentType}");
@@ -36,5 +32,18 @@ public static class BlobFunction
         }
 
         return $"File: {name}\nContentType: {properties.Value.ContentType}\n";
+    }
+
+    [Function("CopyFile")]
+    public static async Task RunAsync(
+        [BlobTrigger("test-samples-copy/{name}")] Stream myBlobInput,
+        [Blob("test-samples-output/{name}-output.txt")] Stream myBlobOutput,
+        string name,
+        FunctionContext context,
+        CancellationToken ct)
+    {
+        ILogger logger = context.GetLogger("BlobFunction");
+
+        await myBlobInput.CopyToAsync(myBlobOutput, 89120, ct);
     }
 }
