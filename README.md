@@ -104,6 +104,3 @@ FileMetadataExtractor/
 ## Security
 - Do not commit secrets or connection strings.
 - Use managed identities or Key Vault where possible in production.
-
-## License
-Add your license information here (or include a LICENSE file).
